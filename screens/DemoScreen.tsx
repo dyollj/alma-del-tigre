@@ -10,19 +10,53 @@ import {
 
 import { Text, View } from "../components/Themed";
 
+interface AdaptiveTextProps {
+  minFontSize: number;
+  maxTextLines: number;
+  children?: React.ReactNode;
+}
+
+const AdaptiveText = (props: AdaptiveTextProps) => {
+  const [hasHitBoundary, setHasHitBoundary] = useState(false);
+  
+  const [fontSize, setFontSize] = useState(props.minFontSize);
+  const inflate = () => void setFontSize((fontSize) => fontSize + 2);
+  const deflate = () => void setFontSize((fontSize) => fontSize - 1);
+
+  return (
+    <Text
+      onTextLayout={(event: NativeSyntheticEvent<TextLayoutEventData>) => {
+        const lines: TextLayoutLine[] = event.nativeEvent.lines;
+        setTimeout(() => {
+          if (!hasHitBoundary) {
+            if (lines.length <= props.maxTextLines) {
+              inflate();
+            } else {
+              setHasHitBoundary(true);
+            }
+          }
+          if (lines.length > props.maxTextLines) {
+            deflate();
+          }
+        }, 200);
+      }}
+      style={{
+        fontSize,
+        fontWeight: "bold",
+        color: "#00A82D",
+      }}
+    >
+      {props.children}
+    </Text>
+  );
+};
+
 export default function DemoScreen() {
-  const [lines, setLines] = useState<TextLayoutLine[]>();
   return (
     <View style={styles.container}>
-      <Text
-        onTextLayout={(event: NativeSyntheticEvent<TextLayoutEventData>) => {
-          setLines(event.nativeEvent.lines);
-          console.log({ lines });
-        }}
-        style={styles.title}
-      >
+      <AdaptiveText minFontSize={10} maxTextLines={2}>
         This is a line of sample Evernote copy.
-      </Text>
+      </AdaptiveText>
 
       {/* Use a light status bar on iOS to account for the black space above the modal */}
       <StatusBar style={Platform.OS === "ios" ? "light" : "auto"} />
@@ -35,10 +69,5 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: "center",
     justifyContent: "center",
-  },
-  title: {
-    fontSize: 60,
-    fontWeight: "bold",
-    color: "#00A82D",
   },
 });
